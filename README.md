@@ -87,7 +87,7 @@ The script will:
 1. Rename the downloaded file to `client_secrets.json`
 2. Place it in this directory:
    ```
-   youtube-uploader/
+   youtube-upload-script/
    └── client_secrets.json
    ```
 
@@ -113,17 +113,34 @@ After this one-time setup, future uploads will use the saved token automatically
 script.bat "path\to\video.mp4"
 ```
 
+### Add a Right-Click Context Menu (Easy Context Menu)
+
+Use [Easy Context Menu](https://www.sordum.org/7615/easy-context-menu/) to add a right-click option that calls `script.bat` with the selected file.
+
+1. Put this repo in a stable path (e.g., `C:\YouTube Upload Script\`) and run `install.bat` so `ffmpeg`, `ffprobe`, and `youtubeuploader` are available.
+2. Download and extract Easy Context Menu, then run `EcMenu_x64.exe` (or `EcMenu.exe` on 32-bit).
+3. In Easy Context Menu, open **File Context Menu** and choose **Add Custom Command** (plus icon).
+4. Configure the entry:
+   - **Target Context Menu**: `5. File Context Menu`
+   - **Title**: `Upload to YouTube` (any label is fine)
+   - **Program**: `C:\YouTube Upload Script\script.bat`
+   - **Parameter**: `"%1"`
+   - **Icon**: optional; browse to `youtubeuploader.exe` or any icon you like
+5. Click **Apply Changes** to write the registry entry.
+
+Usage: Right-click a video file → `Upload to YouTube`. The console will open, auto-crop if needed, and upload with the generated title. If you later move the script folder, update the command path in Easy Context Menu. To remove the entry, uncheck/delete it in Easy Context Menu and click **Apply Changes**.
+
 ### Filename Format
 
 The script expects filenames in this format:
 
 ```
-GameName-YYYY.MM.DD - HH.MM.SS.MS.DVR.mp4
+Game Name YYYY.MM.DD - HH.MM.SS.MS.DVR.mp4
 ```
 
 **Example**:
 ```
-Elden Ring-2024.03.15 - 14.30.45.00.DVR.mp4
+Elden Ring 2024.03.15 - 14.30.45.00.DVR.mp4
 ```
 
 Will be uploaded with title:
@@ -153,7 +170,7 @@ Options: `public`, `private`, `unlisted`
 ## File Structure
 
 ```
-youtube-uploader/
+youtube-upload-script/
 ├── install.bat           # Dependency installer
 ├── script.bat            # Main upload script
 ├── client_secrets.json   # OAuth credentials (YOU CREATE THIS)

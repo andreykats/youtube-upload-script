@@ -1,6 +1,8 @@
 # YouTube Upload Script
 
-Automated YouTube video upload script with automatic aspect ratio correction for gaming videos.
+Automated YouTube video upload script with automatic aspect ratio correction for NVIDIA ShadowPlay captured videos.
+
+![Example](example.png)
 
 ## Overview
 

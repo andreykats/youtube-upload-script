@@ -1,0 +1,120 @@
+# ============================================
+# YouTube Uploader - Git Ignore File
+# ============================================
+# This file prevents sensitive credentials and
+# temporary files from being committed to Git.
+
+# ============================================
+# OAuth Credentials and Tokens (CRITICAL!)
+# ============================================
+# These files contain sensitive authentication data
+# and must NEVER be committed to version control
+
+client_secrets.json
+request.token
+*.token
+
+# ============================================
+# Temporary Video Files
+# ============================================
+# Prevent accidentally committing large video files
+
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+*.webm
+
+# Cropped/processed videos
+*cropped*.mp4
+*temp*.mp4
+
+# ============================================
+# Windows Temporary Files
+# ============================================
+
+# Thumbnails
+Thumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Windows shortcuts
+*.lnk
+
+# ============================================
+# Editor and IDE Files
+# ============================================
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Notepad++
+*.bak
+
+# ============================================
+# Logs and Debug Files
+# ============================================
+
+*.log
+*.txt
+debug.log
+error.log
+
+# ============================================
+# Backup Files
+# ============================================
+
+*.backup
+*.old
+*~
+*.swp
+*.swo
+
+# ============================================
+# Environment-Specific Files
+# ============================================
+
+# Local configuration overrides
+config.local.bat
+settings.local.bat
+
+# API keys (if any additional ones are used)
+*.key
+*.pem
+*.p12
+api_keys.json
+
+# ============================================
+# Build and Distribution
+# ============================================
+
+dist/
+build/
+*.zip
+*.7z
+*.tar.gz
+
+# ============================================
+# Other Sensitive Files
+# ============================================
+
+# Any file with "secret" or "private" in name
+*secret*
+*private*
+*credentials*
+
+# Exception: Don't ignore the install.bat and script.bat
+!install.bat
+!script.bat

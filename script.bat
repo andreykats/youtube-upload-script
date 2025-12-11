@@ -249,7 +249,7 @@ echo Title: !VIDEO_TITLE!
 echo File: !UPLOAD_FILE!
 echo.
 
-"%UPLOADER%" -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -privacy public -secrets "!YT_SECRETS!" -cache "!SCRIPT_DIR!request.token"
+"%UPLOADER%" -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -description "" -privacy public -secrets "!YT_SECRETS!" -cache "!SCRIPT_DIR!request.token"
 set "UPLOAD_ERR=!errorlevel!"
 
 if !UPLOAD_ERR! neq 0 (

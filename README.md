@@ -154,7 +154,7 @@ Elden Ring - 2:30PM - 03.15.2024
 2. **Extracts metadata** - Parses game name, date, and time from filename
 3. **Analyzes video** - Checks aspect ratio using FFprobe
 4. **Auto-crops** (if needed) - Crops ultrawide videos to 16:9
-5. **Uploads to YouTube** - Uploads with formatted title as unlisted video
+5. **Uploads to YouTube** - Uploads with formatted title as public video
 6. **Cleans up** - Removes temporary cropped file
 
 ### Privacy Settings
@@ -162,7 +162,7 @@ Elden Ring - 2:30PM - 03.15.2024
 By default, videos are uploaded as **public**. To change this, edit [script.bat:152](script.bat#L152):
 
 ```batch
-%UPLOADER% -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -privacy public
+%UPLOADER% -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -description "" -privacy public
 ```
 
 Options: `public`, `private`, `unlisted`

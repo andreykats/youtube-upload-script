@@ -70,11 +70,14 @@ The script will:
    - Add your Google account as a test user
 4. Return to **Credentials → CREATE CREDENTIALS → OAuth client ID**
 5. Application type: **Web application**
-6. Name: Any name (e.g., "YouTube Uploader Client")
+6. Name: Any name (e.g., "YouTube Uploader")
 7. Authorized redirect URIs: Add `http://localhost:8080/oauth2callback`
 8. Click **Create**
 9. Click the **Download** icon (⬇️) next to your newly created OAuth client ID
 10. Save the downloaded JSON file
+11. Go to **APIs & Services → OAuth consent screen**
+12. Click **Audience**
+13. Under "Publishing Status", select **Publish**
 
 #### C. Set Up Credentials File
 

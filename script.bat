@@ -12,6 +12,10 @@ set "FFPROBE=ffprobe"
 set "UPLOADER=youtubeuploader"
 set "WHERE_CMD=%SystemRoot%\System32\where.exe"
 if not exist "%WHERE_CMD%" set "WHERE_CMD=where"
+set "PATH_REFRESHED=0"
+
+REM Refresh PATH from registry to avoid stale Explorer environment
+call :RefreshPath
 
 REM Create temp directory
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
@@ -270,6 +274,16 @@ goto :EOF
 REM ============================================
 REM SUBROUTINES
 REM ============================================
+:RefreshPath
+REM Combine system + user PATH from registry to catch recent installs when double-clicked from Explorer
+for /f "skip=2 tokens=2*" %%a in ('reg query "HKLM\System\CurrentControlSet\Control\Session Manager\Environment" /v PATH 2^>nul') do set "SYSTEM_PATH=%%b"
+for /f "skip=2 tokens=2*" %%a in ('reg query "HKCU\Environment" /v PATH 2^>nul') do set "USER_PATH=%%b"
+if defined SYSTEM_PATH if defined USER_PATH (
+    set "PATH=!SYSTEM_PATH!;!USER_PATH!"
+    set "PATH_REFRESHED=1"
+)
+goto :EOF
+
 :CheckDependency
 REM Arguments:
 REM   %1 - Friendly name (FFmpeg, FFprobe, etc.)
@@ -280,28 +294,49 @@ set "DEP_NAME=%~1"
 set "DEP_CMD=%~2"
 set "DEP_FALLBACK=%~3"
 set "DEP_FOUND="
+set "DEP_CMD_RAW=%DEP_CMD:"=%"
+set "DEP_FALLBACK_RAW=%DEP_FALLBACK:"=%"
 
-REM Try the provided command/path first
-"%WHERE_CMD%" /q "%DEP_CMD%" >nul 2>&1
-if !errorlevel! equ 0 (
-    for /f "delims=" %%p in ('"%WHERE_CMD%" "%DEP_CMD%" 2^>nul') do (
-        set "DEP_FOUND=%%p"
-        goto :CheckDepFound
+REM Direct path check first (covers custom absolute paths)
+if defined DEP_CMD_RAW if exist "%DEP_CMD_RAW%" set "DEP_FOUND=%DEP_CMD_RAW%"
+if not defined DEP_FOUND if defined DEP_FALLBACK_RAW if exist "%DEP_FALLBACK_RAW%" set "DEP_FOUND=%DEP_FALLBACK_RAW%"
+
+REM PATH lookup using %%~$PATH (respects PATHEXT)
+for %%i in ("%DEP_CMD_RAW%") do if not defined DEP_FOUND set "DEP_FOUND=%%~$PATH:i"
+for %%i in ("%DEP_FALLBACK_RAW%") do if not defined DEP_FOUND set "DEP_FOUND=%%~$PATH:i"
+
+REM where.exe lookup as extra safety (handles wildcards)
+if not defined DEP_FOUND (
+    "%WHERE_CMD%" /q "%DEP_CMD_RAW%" >nul 2>&1
+    if !errorlevel! equ 0 (
+        for /f "delims=" %%p in ('"%WHERE_CMD%" "%DEP_CMD_RAW%" 2^>nul') do (
+            set "DEP_FOUND=%%p"
+            goto :CheckDepFound
+        )
     )
 )
 
-REM Fall back to the expected executable name (covers PATHEXT scenarios)
-"%WHERE_CMD%" /q "%DEP_FALLBACK%" >nul 2>&1
-if !errorlevel! equ 0 (
-    for /f "delims=" %%p in ('"%WHERE_CMD%" "%DEP_FALLBACK%" 2^>nul') do (
-        set "DEP_FOUND=%%p"
-        goto :CheckDepFound
+if not defined DEP_FOUND (
+    "%WHERE_CMD%" /q "%DEP_FALLBACK_RAW%" >nul 2>&1
+    if !errorlevel! equ 0 (
+        for /f "delims=" %%p in ('"%WHERE_CMD%" "%DEP_FALLBACK_RAW%" 2^>nul') do (
+            set "DEP_FOUND=%%p"
+            goto :CheckDepFound
+        )
     )
 )
 
-echo [ERROR] %DEP_NAME% not found in PATH (looked for "%DEP_CMD%" and "%DEP_FALLBACK%")
-set "MISSING_DEPS=1"
-goto :EOF
+if not defined DEP_FOUND (
+    echo [ERROR] %DEP_NAME% not found in PATH (looked for "%DEP_CMD%" and "%DEP_FALLBACK%")
+    if !PATH_REFRESHED! equ 0 (
+        echo [INFO] PATH may be stale. Re-reading PATH from registry and retrying...
+        call :RefreshPath
+        set "PATH_REFRESHED=1"
+        goto :CheckDependency
+    )
+    set "MISSING_DEPS=1"
+    goto :EOF
+)
 
 :CheckDepFound
 echo [OK] %DEP_NAME% found at: !DEP_FOUND!

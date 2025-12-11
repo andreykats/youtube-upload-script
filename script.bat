@@ -7,6 +7,8 @@ REM ============================================
 
 set "INPUT_FILE=%~1"
 set "TEMP_DIR=%TEMP%\youtube_upload"
+set "INPUT_BASENAME=%~n1"
+set "INPUT_EXT=%~x1"
 set "FFMPEG=ffmpeg.exe"
 set "FFPROBE=ffprobe.exe"
 set "UPLOADER=youtubeuploader.exe"
@@ -50,6 +52,9 @@ if not exist "!INPUT_FILE!" (
     pause
     exit /b 1
 )
+
+REM Resolve input directory (for cropped output)
+for %%I in ("!INPUT_FILE!") do set "INPUT_DIR=%%~dpI"
 
 REM ============================================
 REM Extract metadata from filename
@@ -187,7 +192,7 @@ if "!NEEDS_CROP!"=="1" (
     set /a "NEW_WIDTH=(!HEIGHT! * 16) / 9"
     set /a "X_OFFSET=(!WIDTH! - !NEW_WIDTH!) / 2"
     
-    set "OUTPUT_FILE=%TEMP_DIR%\cropped_video.mp4"
+    set "OUTPUT_FILE=!INPUT_DIR!!INPUT_BASENAME! - Cropped!INPUT_EXT!"
     
     echo Crop dimensions: !NEW_WIDTH!x!HEIGHT! starting at X=!X_OFFSET!
     

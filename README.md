@@ -76,12 +76,11 @@ The script will:
 9. Click the **Download** icon (⬇️) next to your newly created OAuth client ID
 10. Save the downloaded JSON file
 
-#### c. Update Publishing Status
+#### C. Update Publishing Status
 
 1. Go to **APIs & Services → OAuth consent screen**
 2. Click **Audience**
 3. Under "Publishing Status", select **Publish**
-
 
 #### D. Set Up Credentials File
 

@@ -283,6 +283,8 @@ if defined SYSTEM_PATH if defined USER_PATH (
     REM Expand embedded variables (e.g., %SystemRoot%) from registry values
     call set "PATH=%PATH%"
     set "PATH_REFRESHED=1"
+    echo [INFO] Current PATH is:
+    echo !PATH!
 )
 goto :EOF
 
@@ -293,58 +295,36 @@ REM   %2 - Command or path to check
 REM   %3 - Fallback executable name (with .exe)
 
 set "DEP_NAME=%~1"
-set "DEP_CMD=%~2"
-set "DEP_FALLBACK=%~3"
+set "DEP_CMD_RAW=%~2"
+set "DEP_FALLBACK_RAW=%~3"
 set "DEP_FOUND="
-set "DEP_CMD_RAW=%DEP_CMD:"=%"
-set "DEP_FALLBACK_RAW=%DEP_FALLBACK:"=%"
 
-REM Direct path check first (covers custom absolute paths)
-if defined DEP_CMD_RAW if exist "%DEP_CMD_RAW%" set "DEP_FOUND=%DEP_CMD_RAW%"
-if not defined DEP_FOUND if defined DEP_FALLBACK_RAW if exist "%DEP_FALLBACK_RAW%" set "DEP_FOUND=%DEP_FALLBACK_RAW%"
+REM Direct path check first (absolute paths)
+if exist "%DEP_CMD_RAW%" set "DEP_FOUND=%DEP_CMD_RAW%"
+if not defined DEP_FOUND if exist "%DEP_FALLBACK_RAW%" set "DEP_FOUND=%DEP_FALLBACK_RAW%"
 
-REM PATH lookup using %%~$PATH (respects PATHEXT)
-for %%i in ("%DEP_CMD_RAW%") do if not defined DEP_FOUND set "DEP_FOUND=%%~$PATH:i"
-for %%i in ("%DEP_FALLBACK_RAW%") do if not defined DEP_FOUND set "DEP_FOUND=%%~$PATH:i"
-
-REM where.exe lookup as extra safety (handles wildcards)
+REM PATH lookup using where (handles PATHEXT)
 if not defined DEP_FOUND (
-    "%WHERE_CMD%" /q %DEP_CMD_RAW% >nul 2>&1
-    if !errorlevel! equ 0 (
-        for /f "delims=" %%p in ('"%WHERE_CMD%" %DEP_CMD_RAW% 2^>nul') do (
-            set "DEP_FOUND=%%p"
-            goto :CheckDepFound
+    for %%p in (%DEP_CMD_RAW% %DEP_FALLBACK_RAW%) do (
+        if not defined DEP_FOUND (
+            for /f "delims=" %%i in ('where.exe %%p 2^>nul') do (
+                set "DEP_FOUND=%%i"
+                goto :AfterLookup
+            )
         )
     )
 )
 
-if not defined DEP_FOUND (
-    "%WHERE_CMD%" /q %DEP_FALLBACK_RAW% >nul 2>&1
-    if !errorlevel! equ 0 (
-        for /f "delims=" %%p in ('"%WHERE_CMD%" %DEP_FALLBACK_RAW% 2^>nul') do (
-            set "DEP_FOUND=%%p"
-            goto :CheckDepFound
-        )
-    )
-)
-
+:AfterLookup
 REM Check well-known install locations (installer defaults)
 if not defined DEP_FOUND (
     call :FindDefaultInstall "%DEP_NAME%" DEP_FOUND
 )
 
 if not defined DEP_FOUND (
-    echo [ERROR] %DEP_NAME% not found in PATH (looked for "%DEP_CMD%" and "%DEP_FALLBACK%")
+    echo [ERROR] %DEP_NAME% not found in PATH (looked for "%DEP_CMD_RAW%" and "%DEP_FALLBACK_RAW%")
     echo [INFO] Current PATH is:
     echo !PATH!
-    echo [INFO] where output for %DEP_CMD%:
-    for /f "usebackq delims=" %%p in ('%WHERE_CMD% %DEP_CMD_RAW% 2^>nul') do set "DEP_FOUND=%%p"
-    if defined DEP_FOUND goto :CheckDepFound
-    "%WHERE_CMD%" %DEP_CMD_RAW%
-    echo [INFO] where output for %DEP_FALLBACK%:
-    for /f "usebackq delims=" %%p in ('%WHERE_CMD% %DEP_FALLBACK_RAW% 2^>nul') do set "DEP_FOUND=%%p"
-    if defined DEP_FOUND goto :CheckDepFound
-    "%WHERE_CMD%" %DEP_FALLBACK_RAW%
     if !PATH_REFRESHED! equ 0 (
         echo [INFO] PATH may be stale. Re-reading PATH from registry and retrying...
         call :RefreshPath
@@ -355,7 +335,6 @@ if not defined DEP_FOUND (
     goto :EOF
 )
 
-:CheckDepFound
 echo [OK] %DEP_NAME% found at: !DEP_FOUND!
 goto :EOF
 

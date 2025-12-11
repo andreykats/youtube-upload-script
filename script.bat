@@ -20,19 +20,22 @@ REM ============================================
 set "MISSING_DEPS=0"
 
 where ffmpeg.exe >nul 2>&1
-if %errorlevel% neq 0 (
+set "FFMPEG_ERR=!errorlevel!"
+if !FFMPEG_ERR! neq 0 (
     echo [ERROR] ffmpeg.exe not found in PATH
     set "MISSING_DEPS=1"
 )
 
 where ffprobe.exe >nul 2>&1
-if %errorlevel% neq 0 (
+set "FFPROBE_ERR=!errorlevel!"
+if !FFPROBE_ERR! neq 0 (
     echo [ERROR] ffprobe.exe not found in PATH
     set "MISSING_DEPS=1"
 )
 
 where youtubeuploader.exe >nul 2>&1
-if %errorlevel% neq 0 (
+set "UPLOADER_ERR=!errorlevel!"
+if !UPLOADER_ERR! neq 0 (
     echo [ERROR] youtubeuploader.exe not found in PATH
     set "MISSING_DEPS=1"
 )
@@ -60,6 +63,43 @@ if !MISSING_DEPS!==1 (
 
 echo [OK] All dependencies found
 echo.
+
+REM ============================================
+REM Validate Input File
+REM ============================================
+if "!INPUT_FILE!"=="" (
+    echo.
+    echo ============================================
+    echo [ERROR] No Input File Specified
+    echo ============================================
+    echo.
+    echo Usage: script.bat ^<video-file^>
+    echo.
+    echo Example:
+    echo   script.bat "GameName-2024.03.15 - 14.30.45.00.DVR.mp4"
+    echo.
+    echo You can also drag and drop a video file onto this script.
+    echo ============================================
+    echo.
+    pause
+    exit /b 1
+)
+
+if not exist "!INPUT_FILE!" (
+    echo.
+    echo ============================================
+    echo [ERROR] File Not Found
+    echo ============================================
+    echo.
+    echo The specified file does not exist:
+    echo   !INPUT_FILE!
+    echo.
+    echo Please check the file path and try again.
+    echo ============================================
+    echo.
+    pause
+    exit /b 1
+)
 
 REM ============================================
 REM Extract metadata from filename
@@ -97,6 +137,10 @@ REM Trim leading spaces
 set "HOUR=!HOUR: =!"
 set "MINUTE=!MINUTE: =!"
 set "DAY=!DAY: =!"
+
+REM Validate time components
+if "!HOUR!"=="" set "HOUR=00"
+if "!MINUTE!"=="" set "MINUTE=00"
 
 REM Convert to 12-hour format with AM/PM
 set /a "HOUR_NUM=1!HOUR! %% 100"
@@ -138,9 +182,25 @@ echo Checking video aspect ratio...
 
 for /f "tokens=*" %%a in ('%FFPROBE% -v error -select_streams v:0 -show_entries stream^=width^,height -of csv^=s^=x:p^=0 "!INPUT_FILE!"') do set "DIMENSIONS=%%a"
 
+if "!DIMENSIONS!"=="" (
+    echo ERROR: Failed to read video dimensions
+    echo Make sure the file is a valid video file
+    pause
+    exit /b 1
+)
+
 for /f "tokens=1,2 delims=x" %%a in ("!DIMENSIONS!") do (
     set "WIDTH=%%a"
     set "HEIGHT=%%b"
+)
+
+if "!HEIGHT!"=="" set "HEIGHT=0"
+if "!WIDTH!"=="" set "WIDTH=0"
+
+if !HEIGHT! equ 0 (
+    echo ERROR: Invalid video dimensions - height is zero
+    pause
+    exit /b 1
 )
 
 REM Calculate aspect ratio (width/height * 100 for integer math)
@@ -174,8 +234,9 @@ if "!NEEDS_CROP!"=="1" (
     echo Crop dimensions: !NEW_WIDTH!x!HEIGHT! starting at X=!X_OFFSET!
     
     %FFMPEG% -i "!INPUT_FILE!" -vf "crop=!NEW_WIDTH!:!HEIGHT!:!X_OFFSET!:0" -c:a copy "!OUTPUT_FILE!" -y
-    
-    if !ERRORLEVEL! neq 0 (
+    set "FFMPEG_CROP_ERR=!errorlevel!"
+
+    if !FFMPEG_CROP_ERR! neq 0 (
         echo ERROR: FFmpeg crop failed
         pause
         exit /b 1
@@ -197,8 +258,9 @@ echo File: !UPLOAD_FILE!
 echo.
 
 %UPLOADER% -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -privacy unlisted
+set "UPLOAD_ERR=!errorlevel!"
 
-if !ERRORLEVEL! neq 0 (
+if !UPLOAD_ERR! neq 0 (
     echo ERROR: YouTube upload failed
     pause
     exit /b 1

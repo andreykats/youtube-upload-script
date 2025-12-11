@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM ============================================
-REM YouTube Uploader - Dependency Installer
+REM YouTube Upload Script - Dependency Installer
 REM Version: 1.0
 REM ============================================
 REM This script installs FFmpeg and youtubeuploader
@@ -14,12 +14,17 @@ REM Global Variables
 REM ============================================
 set "SCRIPT_VERSION=1.0"
 set "FFMPEG_URL=https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-set "GITHUB_API=https://api.github.com/repos/porjo/youtubeuploader/releases/latest"
+set "YOUTUBEUPLOADER_URL=https://github.com/porjo/youtubeuploader/releases/download/v1.25.5/youtubeuploader_1.25.5_Windows_amd64.zip"
 set "ADMIN_MODE=0"
 set "WINGET_AVAILABLE=0"
 set "FFMPEG_INSTALLED=0"
 set "YOUTUBEUPLOADER_INSTALLED=0"
 set "VERIFY_FAILED=0"
+set "DEBUG_MODE=0"
+set "DOWNLOAD_ERROR_MSG="
+set "DOWNLOAD_MAX_RETRIES=3"
+set "DOWNLOAD_TIMEOUT=120"
+set "DOWNLOAD_CONNECT_TIMEOUT=30"
 
 REM ============================================
 REM Display Welcome Banner
@@ -27,7 +32,7 @@ REM ============================================
 cls
 echo.
 echo ============================================
-echo YouTube Uploader - Dependency Installer
+echo YouTube Upload Script - Dependency Installer
 echo ============================================
 echo Version: %SCRIPT_VERSION%
 echo.
@@ -39,12 +44,17 @@ echo.
 echo ============================================
 echo.
 
+REM Check for debug mode from environment variable
+if /i "%INSTALL_DEBUG%"=="1" set "DEBUG_MODE=1"
+if /i "%INSTALL_DEBUG%"=="true" set "DEBUG_MODE=1"
+
 REM ============================================
 REM Check Administrator Privileges
 REM ============================================
 echo [INFO] Checking administrator privileges...
 net session >nul 2>&1
-if %errorlevel% == 0 (
+set "ADMIN_CHECK=!errorlevel!"
+if !ADMIN_CHECK! == 0 (
     set "ADMIN_MODE=1"
     echo [SUCCESS] Running with administrator privileges
     echo [INFO] Will install to Program Files with system PATH
@@ -55,7 +65,8 @@ if %errorlevel% == 0 (
 
     REM Try to elevate
     powershell -Command "Start-Process '%~f0' -Verb RunAs" 2>nul
-    if !errorlevel! == 0 (
+    set "ELEVATE_CHECK=!errorlevel!"
+    if !ELEVATE_CHECK! == 0 (
         echo [INFO] Elevated script launched. Closing this window...
         timeout /t 2 >nul
         exit /b 0
@@ -72,11 +83,11 @@ REM Set Installation Directories
 REM ============================================
 if %ADMIN_MODE%==1 (
     set "FFMPEG_DIR=%ProgramFiles%\FFmpeg"
-    set "YOUTUBEUPLOADER_DIR=%ProgramFiles%\youtubeuploader"
+    set "YOUTUBEUPLOADER_DIR=%ProgramFiles%\YouTube Uploader"
     set "PATH_TYPE=system"
 ) else (
     set "FFMPEG_DIR=%LOCALAPPDATA%\FFmpeg"
-    set "YOUTUBEUPLOADER_DIR=%LOCALAPPDATA%\youtubeuploader"
+    set "YOUTUBEUPLOADER_DIR=%LOCALAPPDATA%\YouTube Uploader"
     set "PATH_TYPE=user"
 )
 
@@ -87,7 +98,8 @@ echo [INFO] Detecting environment...
 
 REM Check for WinGet
 where winget.exe >nul 2>&1
-if %errorlevel% == 0 (
+set "WINGET_CHECK=!errorlevel!"
+if !WINGET_CHECK! == 0 (
     set "WINGET_AVAILABLE=1"
     echo [SUCCESS] WinGet detected - will use package manager
 ) else (
@@ -97,7 +109,8 @@ if %errorlevel% == 0 (
 
 REM Check for curl
 where curl.exe >nul 2>&1
-if %errorlevel% neq 0 (
+set "CURL_CHECK=!errorlevel!"
+if !CURL_CHECK! neq 0 (
     echo [ERROR] curl not found. Please ensure you're running Windows 10 1803 or later.
     goto InstallError
 )
@@ -122,7 +135,8 @@ echo [INFO] Checking for existing installations...
 
 REM Check FFmpeg
 where ffmpeg.exe >nul 2>&1
-if %errorlevel% == 0 (
+set "FFMPEG_CHECK_ERR=!errorlevel!"
+if !FFMPEG_CHECK_ERR! == 0 (
     echo [FOUND] FFmpeg is already installed
     for /f "tokens=3" %%a in ('ffmpeg -version 2^>nul ^| findstr "ffmpeg version"') do echo   Version: %%a
     set "FFMPEG_INSTALLED=1"
@@ -133,7 +147,8 @@ if %errorlevel% == 0 (
 
 REM Check youtubeuploader
 where youtubeuploader.exe >nul 2>&1
-if %errorlevel% == 0 (
+set "YT_CHECK_ERR=!errorlevel!"
+if !YT_CHECK_ERR! == 0 (
     echo [FOUND] youtubeuploader is already installed
     youtubeuploader -version 2>nul
     set "YOUTUBEUPLOADER_INSTALLED=1"
@@ -144,7 +159,7 @@ if %errorlevel% == 0 (
 echo.
 
 REM Ask user if they want to continue if tools are already installed
-if %FFMPEG_INSTALLED%==1 if %YOUTUBEUPLOADER_INSTALLED%==1 (
+if !FFMPEG_INSTALLED!==1 if !YOUTUBEUPLOADER_INSTALLED!==1 (
     echo All dependencies are already installed.
     choice /C YN /M "Do you want to reinstall/update them"
     if !errorlevel!==2 (
@@ -220,7 +235,8 @@ call :RefreshPath
 
 echo Testing FFmpeg...
 where ffmpeg.exe >nul 2>&1
-if %errorlevel% == 0 (
+set "FFMPEG_VER_CHECK=!errorlevel!"
+if !FFMPEG_VER_CHECK! == 0 (
     for /f "tokens=3" %%a in ('ffmpeg -version 2^>nul ^| findstr "ffmpeg version"') do echo   Version: %%a
     echo [OK] FFmpeg is working
 ) else (
@@ -231,7 +247,8 @@ if %errorlevel% == 0 (
 echo.
 echo Testing FFprobe...
 where ffprobe.exe >nul 2>&1
-if %errorlevel% == 0 (
+set "FFPROBE_VER_CHECK=!errorlevel!"
+if !FFPROBE_VER_CHECK! == 0 (
     for /f "tokens=3" %%a in ('ffprobe -version 2^>nul ^| findstr "ffprobe version"') do echo   Version: %%a
     echo [OK] FFprobe is working
 ) else (
@@ -242,7 +259,8 @@ if %errorlevel% == 0 (
 echo.
 echo Testing youtubeuploader...
 where youtubeuploader.exe >nul 2>&1
-if %errorlevel% == 0 (
+set "UPLOADER_VER_CHECK=!errorlevel!"
+if !UPLOADER_VER_CHECK! == 0 (
     youtubeuploader -version 2>nul
     echo [OK] youtubeuploader is working
 ) else (
@@ -250,7 +268,7 @@ if %errorlevel% == 0 (
     set "VERIFY_FAILED=1"
 )
 
-if %VERIFY_FAILED%==1 (
+if !VERIFY_FAILED!==1 (
     echo.
     echo [WARNING] Some tools failed verification
     echo You may need to restart your terminal or computer for PATH changes to take effect
@@ -305,9 +323,11 @@ echo [INFO] Downloading FFmpeg from gyan.dev...
 set "FFMPEG_ZIP=%TEMP%\ffmpeg.zip"
 
 REM Download FFmpeg
-powershell -Command "Invoke-WebRequest -Uri '%FFMPEG_URL%' -OutFile '%FFMPEG_ZIP%'" 2>nul
-if %errorlevel% neq 0 (
-    echo [ERROR] Failed to download FFmpeg
+call :DebugLog "Starting FFmpeg download from %FFMPEG_URL%"
+call :DownloadFileRobust "%FFMPEG_URL%" "%FFMPEG_ZIP%" "FFmpeg"
+if !errorlevel! neq 0 (
+    echo [ERROR] Failed to download FFmpeg after %DOWNLOAD_MAX_RETRIES% attempts
+    echo [ERROR] Reason: !DOWNLOAD_ERROR_MSG!
     exit /b 1
 )
 echo [SUCCESS] Download complete
@@ -342,40 +362,22 @@ REM ============================================
 REM Install youtubeuploader
 REM ============================================
 :InstallYoutubeUploader
-echo [INFO] Fetching latest youtubeuploader release from GitHub...
-set "TEMP_JSON=%TEMP%\yt_release.json"
+echo [INFO] Downloading youtubeuploader from GitHub...
 
-REM Fetch latest release info
-curl -s "%GITHUB_API%" > "%TEMP_JSON%" 2>nul
-if %errorlevel% neq 0 (
-    echo [ERROR] Failed to fetch release information from GitHub
-    exit /b 1
-)
-
-REM Parse JSON to find download URL for Windows binary
-set "YT_URL="
-for /f "tokens=* usebackq" %%a in (`type "%TEMP_JSON%" ^| findstr /i "browser_download_url.*%ARCH%\.zip"`) do (
-    set "DOWNLOAD_LINE=%%a"
-    REM Extract URL from JSON (remove quotes and whitespace)
-    set "DOWNLOAD_LINE=!DOWNLOAD_LINE:*browser_download_url=!"
-    set "DOWNLOAD_LINE=!DOWNLOAD_LINE::=!"
-    set "DOWNLOAD_LINE=!DOWNLOAD_LINE:"=!"
-    set "DOWNLOAD_LINE=!DOWNLOAD_LINE: =!"
-    set "YT_URL=https!DOWNLOAD_LINE!"
-)
-
-if "!YT_URL!"=="" (
-    echo [ERROR] Could not find Windows binary in latest release
-    exit /b 1
-)
-
-echo [INFO] Found download URL: !YT_URL!
-echo [INFO] Downloading youtubeuploader...
+REM Use direct download URL for youtubeuploader
+set "YT_URL=%YOUTUBEUPLOADER_URL%"
+call :DebugLog "Using download URL: !YT_URL!"
+echo [INFO] Downloading youtubeuploader v1.25.5...
 
 set "YT_ZIP=%TEMP%\youtubeuploader.zip"
-curl -L -o "%YT_ZIP%" "!YT_URL!" 2>nul
-if %errorlevel% neq 0 (
-    echo [ERROR] Failed to download youtubeuploader
+call :DebugLog "Download URL: !YT_URL!"
+call :DebugLog "Output path: %YT_ZIP%"
+
+call :DownloadFileRobust "!YT_URL!" "%YT_ZIP%" "youtubeuploader"
+if !errorlevel! neq 0 (
+    echo [ERROR] Failed to download youtubeuploader after %DOWNLOAD_MAX_RETRIES% attempts
+    echo [ERROR] Reason: !DOWNLOAD_ERROR_MSG!
+    echo [HINT] Try running with DEBUG mode: set INSTALL_DEBUG=1
     exit /b 1
 )
 echo [SUCCESS] Download complete
@@ -469,10 +471,200 @@ REM ============================================
 echo [INFO] Cleaning up temporary files...
 del /q "%TEMP%\ffmpeg.zip" 2>nul
 del /q "%TEMP%\youtubeuploader.zip" 2>nul
-del /q "%TEMP%\yt_release.json" 2>nul
 rmdir /s /q "%TEMP%\ffmpeg_extract" 2>nul
 rmdir /s /q "%TEMP%\yt_extract" 2>nul
 goto :EOF
+
+REM ============================================
+REM Debug Logging
+REM ============================================
+:DebugLog
+REM Logs debug messages when DEBUG_MODE is enabled
+REM Arguments:
+REM   %1 - Message to log
+
+if "%DEBUG_MODE%"=="0" goto :EOF
+
+setlocal enabledelayedexpansion
+set "MSG=%~1"
+
+REM Get timestamp
+for /f "tokens=1-4 delims=:.," %%a in ("%time%") do (
+    set "TIMESTAMP=%%a:%%b:%%c.%%d"
+)
+
+echo [DEBUG %TIMESTAMP%] !MSG!
+echo [DEBUG %TIMESTAMP%] !MSG! >> "%TEMP%\install_debug.log" 2>nul
+
+endlocal
+goto :EOF
+
+REM ============================================
+REM Map Curl Error Codes
+REM ============================================
+:GetCurlErrorMessage
+REM Maps curl exit codes to human-readable error messages
+REM Arguments:
+REM   %1 - Curl exit code
+REM   %2 - Output variable name
+REM Returns: Always 0, sets output variable
+
+setlocal
+set "EXIT_CODE=%~1"
+set "MSG="
+
+if "%EXIT_CODE%"=="1" set "MSG=Unsupported protocol"
+if "%EXIT_CODE%"=="3" set "MSG=Malformed URL"
+if "%EXIT_CODE%"=="5" set "MSG=Couldn't resolve proxy"
+if "%EXIT_CODE%"=="6" set "MSG=Couldn't resolve host - check DNS and internet connection"
+if "%EXIT_CODE%"=="7" set "MSG=Failed to connect to server - check firewall and network"
+if "%EXIT_CODE%"=="22" set "MSG=HTTP error (404 Not Found, 403 Forbidden, etc.)"
+if "%EXIT_CODE%"=="23" set "MSG=Write error - check disk space and permissions"
+if "%EXIT_CODE%"=="28" set "MSG=Operation timeout - slow connection or server not responding"
+if "%EXIT_CODE%"=="35" set "MSG=SSL/TLS connection error - certificate validation failed"
+if "%EXIT_CODE%"=="47" set "MSG=Too many redirects"
+if "%EXIT_CODE%"=="52" set "MSG=Server returned nothing"
+if "%EXIT_CODE%"=="56" set "MSG=Connection reset by peer - network interruption"
+if "%EXIT_CODE%"=="60" set "MSG=SSL certificate problem - invalid or expired certificate"
+if "%EXIT_CODE%"=="90" set "MSG=Downloaded file validation failed - file is empty or corrupted"
+
+if "!MSG!"=="" set "MSG=Unknown error (exit code %EXIT_CODE%)"
+
+endlocal & set "%~2=%MSG%" & exit /b 0
+
+REM ============================================
+REM Validate Downloaded File
+REM ============================================
+:ValidateDownloadedFile
+REM Validates a downloaded file exists and has content
+REM Arguments:
+REM   %1 - File path to validate
+REM Returns:
+REM   0 - Valid file
+REM   1 - Invalid file
+
+setlocal
+set "FILE_PATH=%~1"
+
+call :DebugLog "Validating file: %FILE_PATH%"
+
+REM Check file exists
+if not exist "%FILE_PATH%" (
+    call :DebugLog "File does not exist"
+    endlocal & exit /b 1
+)
+
+REM Check file size > 0
+for %%F in ("%FILE_PATH%") do set "FILE_SIZE=%%~zF"
+call :DebugLog "File size: %FILE_SIZE% bytes"
+
+if %FILE_SIZE% equ 0 (
+    call :DebugLog "File is empty (0 bytes)"
+    endlocal & exit /b 1
+)
+
+call :DebugLog "File validation passed"
+endlocal & exit /b 0
+
+REM ============================================
+REM Robust Download Function
+REM ============================================
+:DownloadFileRobust
+REM Downloads a file with retry logic and comprehensive error handling
+REM Arguments:
+REM   %1 - URL to download
+REM   %2 - Output file path
+REM   %3 - Description (for user messages)
+REM Returns:
+REM   0 - Success
+REM   1 - Failed after all retries
+REM   Sets DOWNLOAD_ERROR_MSG with error description
+
+setlocal enabledelayedexpansion
+set "URL=%~1"
+set "OUTPUT=%~2"
+set "DESC=%~3"
+set "ATTEMPT=0"
+set "MAX_RETRIES=%DOWNLOAD_MAX_RETRIES%"
+set "SUCCESS=0"
+
+call :DebugLog "DownloadFileRobust called: URL=%URL%, OUTPUT=%OUTPUT%, DESC=%DESC%"
+
+:RetryLoop
+set /a ATTEMPT+=1
+call :DebugLog "Download attempt %ATTEMPT% of %MAX_RETRIES%"
+
+REM Calculate backoff delay for retry (1s, 3s, 9s)
+set /a BACKOFF_DELAY=1
+if %ATTEMPT% gtr 1 (
+    set /a BACKOFF_DELAY=3*(%ATTEMPT%-1)
+)
+
+if %ATTEMPT% gtr 1 (
+    echo [RETRY] Attempt %ATTEMPT% of %MAX_RETRIES% after !BACKOFF_DELAY!s delay...
+    timeout /t !BACKOFF_DELAY! /nobreak >nul
+)
+
+REM Perform download with full error output and timeouts
+set "CURL_ERROR_FILE=%TEMP%\curl_error_%RANDOM%.txt"
+
+curl -L --fail --max-time %DOWNLOAD_TIMEOUT% --connect-timeout %DOWNLOAD_CONNECT_TIMEOUT% --show-error -o "%OUTPUT%" "%URL%" 2>"%CURL_ERROR_FILE%"
+
+set "CURL_EXIT=%errorlevel%"
+call :DebugLog "Curl exit code: %CURL_EXIT%"
+
+if %CURL_EXIT% equ 0 (
+    REM Download succeeded, validate file
+    call :DebugLog "Download completed, validating file..."
+
+    call :ValidateDownloadedFile "%OUTPUT%"
+    if !errorlevel! equ 0 (
+        set "SUCCESS=1"
+        call :DebugLog "File validation successful"
+        del "%CURL_ERROR_FILE%" 2>nul
+        goto DownloadSuccess
+    ) else (
+        call :DebugLog "File validation failed"
+        set "CURL_EXIT=90"
+    )
+) else (
+    REM Download failed, log error details
+    call :DebugLog "Download failed with exit code %CURL_EXIT%"
+
+    if exist "%CURL_ERROR_FILE%" (
+        for /f "delims=" %%a in (%CURL_ERROR_FILE%) do (
+            echo [CURL ERROR] %%a
+            call :DebugLog "Curl stderr: %%a"
+        )
+        del "%CURL_ERROR_FILE%" 2>nul
+    )
+)
+
+REM Check if we should retry
+if %ATTEMPT% lss %MAX_RETRIES% (
+    REM Determine if error is retryable
+    if %CURL_EXIT% equ 22 (
+        echo [ERROR] HTTP error - resource not found or forbidden
+        goto DownloadFailed
+    )
+    if %CURL_EXIT% equ 23 (
+        echo [ERROR] Cannot write to disk - check disk space and permissions
+        goto DownloadFailed
+    )
+
+    REM Retryable error, continue loop
+    goto RetryLoop
+) else (
+    goto DownloadFailed
+)
+
+:DownloadSuccess
+call :DebugLog "Download successful after %ATTEMPT% attempt(s)"
+endlocal & set "DOWNLOAD_ERROR_MSG=" & exit /b 0
+
+:DownloadFailed
+call :GetCurlErrorMessage %CURL_EXIT% ERROR_MSG
+endlocal & set "DOWNLOAD_ERROR_MSG=%ERROR_MSG%" & exit /b 1
 
 REM ============================================
 REM Error Handler
@@ -490,6 +682,8 @@ echo   2. Ensure you have sufficient disk space
 echo   3. Try running as administrator (right-click -^> Run as administrator)
 echo   4. Check Windows Event Viewer for details
 echo   5. Verify firewall isn't blocking downloads
+echo   6. Run with debug mode: set INSTALL_DEBUG=1 ^&^& install.bat
+echo   7. Check debug log: %TEMP%\install_debug.log
 echo.
 call :Cleanup
 pause

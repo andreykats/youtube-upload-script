@@ -1,6 +1,6 @@
-# YouTube Uploader
+# YouTube Upload Script
 
-Automated YouTube video upload script with automatic aspect ratio correction.
+Automated YouTube video upload script with automatic aspect ratio correction for gaming videos.
 
 ## Overview
 

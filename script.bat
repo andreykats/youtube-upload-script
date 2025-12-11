@@ -326,8 +326,15 @@ if not defined DEP_FOUND (
     )
 )
 
+REM Check well-known install locations (installer defaults)
+if not defined DEP_FOUND (
+    call :FindDefaultInstall "%DEP_NAME%" DEP_FOUND
+)
+
 if not defined DEP_FOUND (
     echo [ERROR] %DEP_NAME% not found in PATH (looked for "%DEP_CMD%" and "%DEP_FALLBACK%")
+    echo [INFO] Current PATH is:
+    echo !PATH!
     if !PATH_REFRESHED! equ 0 (
         echo [INFO] PATH may be stale. Re-reading PATH from registry and retrying...
         call :RefreshPath
@@ -340,4 +347,32 @@ if not defined DEP_FOUND (
 
 :CheckDepFound
 echo [OK] %DEP_NAME% found at: !DEP_FOUND!
+goto :EOF
+
+:FindDefaultInstall
+REM Finds tool in default installer locations
+REM   %1 - Friendly name
+REM   %2 - Output variable
+set "FD_NAME=%~1"
+set "FD_OUT_VAR=%~2"
+set "FD_FOUND="
+
+if /i "%FD_NAME%"=="FFmpeg" (
+    if exist "%ProgramFiles%\FFmpeg\bin\ffmpeg.exe" set "FD_FOUND=%ProgramFiles%\FFmpeg\bin\ffmpeg.exe"
+    if not defined FD_FOUND if exist "%LOCALAPPDATA%\FFmpeg\bin\ffmpeg.exe" set "FD_FOUND=%LOCALAPPDATA%\FFmpeg\bin\ffmpeg.exe"
+)
+
+if /i "%FD_NAME%"=="FFprobe" (
+    if exist "%ProgramFiles%\FFmpeg\bin\ffprobe.exe" set "FD_FOUND=%ProgramFiles%\FFmpeg\bin\ffprobe.exe"
+    if not defined FD_FOUND if exist "%LOCALAPPDATA%\FFmpeg\bin\ffprobe.exe" set "FD_FOUND=%LOCALAPPDATA%\FFmpeg\bin\ffprobe.exe"
+)
+
+if /i "%FD_NAME%"=="youtubeuploader" (
+    if exist "%ProgramFiles%\YouTube Uploader\youtubeuploader.exe" set "FD_FOUND=%ProgramFiles%\YouTube Uploader\youtubeuploader.exe"
+    if not defined FD_FOUND if exist "%LOCALAPPDATA%\YouTube Uploader\youtubeuploader.exe" set "FD_FOUND=%LOCALAPPDATA%\YouTube Uploader\youtubeuploader.exe"
+    if not defined FD_FOUND if exist "C:\Program Files\youtubeuploader\youtubeuploader.exe" set "FD_FOUND=C:\Program Files\youtubeuploader\youtubeuploader.exe"
+    if not defined FD_FOUND if exist "%LOCALAPPDATA%\youtubeuploader\youtubeuploader.exe" set "FD_FOUND=%LOCALAPPDATA%\youtubeuploader\youtubeuploader.exe"
+)
+
+if defined FD_FOUND set "%FD_OUT_VAR%=%FD_FOUND%"
 goto :EOF

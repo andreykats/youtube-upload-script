@@ -280,6 +280,8 @@ for /f "skip=2 tokens=2*" %%a in ('reg query "HKLM\System\CurrentControlSet\Cont
 for /f "skip=2 tokens=2*" %%a in ('reg query "HKCU\Environment" /v PATH 2^>nul') do set "USER_PATH=%%b"
 if defined SYSTEM_PATH if defined USER_PATH (
     set "PATH=%SYSTEM_PATH%;%USER_PATH%"
+    REM Expand embedded variables (e.g., %SystemRoot%) from registry values
+    call set "PATH=%PATH%"
     set "PATH_REFRESHED=1"
 )
 goto :EOF
@@ -336,8 +338,12 @@ if not defined DEP_FOUND (
     echo [INFO] Current PATH is:
     echo !PATH!
     echo [INFO] where output for %DEP_CMD%:
+    for /f "usebackq delims=" %%p in ('%WHERE_CMD% %DEP_CMD_RAW% 2^>nul') do set "DEP_FOUND=%%p"
+    if defined DEP_FOUND goto :CheckDepFound
     "%WHERE_CMD%" %DEP_CMD_RAW%
     echo [INFO] where output for %DEP_FALLBACK%:
+    for /f "usebackq delims=" %%p in ('%WHERE_CMD% %DEP_FALLBACK_RAW% 2^>nul') do set "DEP_FOUND=%%p"
+    if defined DEP_FOUND goto :CheckDepFound
     "%WHERE_CMD%" %DEP_FALLBACK_RAW%
     if !PATH_REFRESHED! equ 0 (
         echo [INFO] PATH may be stale. Re-reading PATH from registry and retrying...

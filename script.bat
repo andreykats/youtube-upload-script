@@ -279,7 +279,7 @@ REM Combine system + user PATH from registry to catch recent installs when doubl
 for /f "skip=2 tokens=2*" %%a in ('reg query "HKLM\System\CurrentControlSet\Control\Session Manager\Environment" /v PATH 2^>nul') do set "SYSTEM_PATH=%%b"
 for /f "skip=2 tokens=2*" %%a in ('reg query "HKCU\Environment" /v PATH 2^>nul') do set "USER_PATH=%%b"
 if defined SYSTEM_PATH if defined USER_PATH (
-    set "PATH=!SYSTEM_PATH!;!USER_PATH!"
+    set "PATH=%SYSTEM_PATH%;%USER_PATH%"
     set "PATH_REFRESHED=1"
 )
 goto :EOF
@@ -307,9 +307,9 @@ for %%i in ("%DEP_FALLBACK_RAW%") do if not defined DEP_FOUND set "DEP_FOUND=%%~
 
 REM where.exe lookup as extra safety (handles wildcards)
 if not defined DEP_FOUND (
-    "%WHERE_CMD%" /q "%DEP_CMD_RAW%" >nul 2>&1
+    "%WHERE_CMD%" /q %DEP_CMD_RAW% >nul 2>&1
     if !errorlevel! equ 0 (
-        for /f "delims=" %%p in ('"%WHERE_CMD%" "%DEP_CMD_RAW%" 2^>nul') do (
+        for /f "delims=" %%p in ('"%WHERE_CMD%" %DEP_CMD_RAW% 2^>nul') do (
             set "DEP_FOUND=%%p"
             goto :CheckDepFound
         )
@@ -317,9 +317,9 @@ if not defined DEP_FOUND (
 )
 
 if not defined DEP_FOUND (
-    "%WHERE_CMD%" /q "%DEP_FALLBACK_RAW%" >nul 2>&1
+    "%WHERE_CMD%" /q %DEP_FALLBACK_RAW% >nul 2>&1
     if !errorlevel! equ 0 (
-        for /f "delims=" %%p in ('"%WHERE_CMD%" "%DEP_FALLBACK_RAW%" 2^>nul') do (
+        for /f "delims=" %%p in ('"%WHERE_CMD%" %DEP_FALLBACK_RAW% 2^>nul') do (
             set "DEP_FOUND=%%p"
             goto :CheckDepFound
         )
@@ -335,6 +335,10 @@ if not defined DEP_FOUND (
     echo [ERROR] %DEP_NAME% not found in PATH (looked for "%DEP_CMD%" and "%DEP_FALLBACK%")
     echo [INFO] Current PATH is:
     echo !PATH!
+    echo [INFO] where output for %DEP_CMD%:
+    "%WHERE_CMD%" %DEP_CMD_RAW%
+    echo [INFO] where output for %DEP_FALLBACK%:
+    "%WHERE_CMD%" %DEP_FALLBACK_RAW%
     if !PATH_REFRESHED! equ 0 (
         echo [INFO] PATH may be stale. Re-reading PATH from registry and retrying...
         call :RefreshPath

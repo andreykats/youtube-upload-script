@@ -10,6 +10,8 @@ set "TEMP_DIR=%TEMP%\youtube_upload"
 set "FFMPEG=ffmpeg"
 set "FFPROBE=ffprobe"
 set "UPLOADER=youtubeuploader"
+set "WHERE_CMD=%SystemRoot%\System32\where.exe"
+if not exist "%WHERE_CMD%" set "WHERE_CMD=where"
 
 REM Create temp directory
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
@@ -19,26 +21,9 @@ REM Check for Required Dependencies
 REM ============================================
 set "MISSING_DEPS=0"
 
-where ffmpeg.exe >nul 2>&1
-set "FFMPEG_ERR=!errorlevel!"
-if !FFMPEG_ERR! neq 0 (
-    echo [ERROR] ffmpeg.exe not found in PATH
-    set "MISSING_DEPS=1"
-)
-
-where ffprobe.exe >nul 2>&1
-set "FFPROBE_ERR=!errorlevel!"
-if !FFPROBE_ERR! neq 0 (
-    echo [ERROR] ffprobe.exe not found in PATH
-    set "MISSING_DEPS=1"
-)
-
-where youtubeuploader.exe >nul 2>&1
-set "UPLOADER_ERR=!errorlevel!"
-if !UPLOADER_ERR! neq 0 (
-    echo [ERROR] youtubeuploader.exe not found in PATH
-    set "MISSING_DEPS=1"
-)
+call :CheckDependency "FFmpeg" "%FFMPEG%" "ffmpeg.exe"
+call :CheckDependency "FFprobe" "%FFPROBE%" "ffprobe.exe"
+call :CheckDependency "youtubeuploader" "%UPLOADER%" "youtubeuploader.exe"
 
 if !MISSING_DEPS!==1 (
     echo.
@@ -280,3 +265,44 @@ echo Upload complete!
 echo ============================================
 echo.
 pause
+goto :EOF
+
+REM ============================================
+REM SUBROUTINES
+REM ============================================
+:CheckDependency
+REM Arguments:
+REM   %1 - Friendly name (FFmpeg, FFprobe, etc.)
+REM   %2 - Command or path to check
+REM   %3 - Fallback executable name (with .exe)
+
+set "DEP_NAME=%~1"
+set "DEP_CMD=%~2"
+set "DEP_FALLBACK=%~3"
+set "DEP_FOUND="
+
+REM Try the provided command/path first
+"%WHERE_CMD%" /q "%DEP_CMD%" >nul 2>&1
+if !errorlevel! equ 0 (
+    for /f "delims=" %%p in ('"%WHERE_CMD%" "%DEP_CMD%" 2^>nul') do (
+        set "DEP_FOUND=%%p"
+        goto :CheckDepFound
+    )
+)
+
+REM Fall back to the expected executable name (covers PATHEXT scenarios)
+"%WHERE_CMD%" /q "%DEP_FALLBACK%" >nul 2>&1
+if !errorlevel! equ 0 (
+    for /f "delims=" %%p in ('"%WHERE_CMD%" "%DEP_FALLBACK%" 2^>nul') do (
+        set "DEP_FOUND=%%p"
+        goto :CheckDepFound
+    )
+)
+
+echo [ERROR] %DEP_NAME% not found in PATH (looked for "%DEP_CMD%" and "%DEP_FALLBACK%")
+set "MISSING_DEPS=1"
+goto :EOF
+
+:CheckDepFound
+echo [OK] %DEP_NAME% found at: !DEP_FOUND!
+goto :EOF

@@ -173,7 +173,7 @@ Options: `public`, `private`, `unlisted`
 youtube-upload-script/
 ├── install.bat           # Dependency installer
 ├── script.bat            # Main upload script
-├── client_secrets.json   # OAuth credentials (YOU CREATE THIS)
+├── client_secrets.json   # OAuth credentials (DOWNLOADED FROM GOOGLE)
 ├── request.token         # OAuth token (AUTO-GENERATED)
 ├── README.md             # This file
 └── .gitignore            # Prevents committing secrets

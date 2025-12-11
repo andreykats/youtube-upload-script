@@ -9,10 +9,12 @@ set "INPUT_FILE=%~1"
 set "TEMP_DIR=%TEMP%\youtube_upload"
 set "INPUT_BASENAME=%~n1"
 set "INPUT_EXT=%~x1"
+set "SCRIPT_DIR=%~dp0"
 set "FFMPEG=ffmpeg.exe"
 set "FFPROBE=ffprobe.exe"
 set "UPLOADER=youtubeuploader.exe"
 set "CROPPED_CREATED=0"
+set "YT_SECRETS="
 
 REM Create temp directory
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
@@ -56,6 +58,25 @@ if not exist "!INPUT_FILE!" (
 
 REM Resolve input directory (for cropped output)
 for %%I in ("!INPUT_FILE!") do set "INPUT_DIR=%%~dpI"
+
+REM Locate YouTube client secrets
+if exist "!SCRIPT_DIR!client_secrets.json" set "YT_SECRETS=!SCRIPT_DIR!client_secrets.json"
+if not defined YT_SECRETS if exist "!SCRIPT_DIR!client_secret.json" set "YT_SECRETS=!SCRIPT_DIR!client_secret.json"
+if not defined YT_SECRETS if exist "%APPDATA%\youtubeuploader\client_secrets.json" set "YT_SECRETS=%APPDATA%\youtubeuploader\client_secrets.json"
+if not defined YT_SECRETS (
+    echo.
+    echo ============================================
+    echo [ERROR] client_secrets.json not found
+    echo ============================================
+    echo Place client_secrets.json in:
+    echo   - !SCRIPT_DIR!
+    echo or
+    echo   - %APPDATA%\youtubeuploader\
+    echo ============================================
+    echo.
+    pause
+    exit /b 1
+)
 
 REM ============================================
 REM Extract metadata from filename
@@ -228,7 +249,7 @@ echo Title: !VIDEO_TITLE!
 echo File: !UPLOAD_FILE!
 echo.
 
-%UPLOADER% -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -privacy unlisted
+%UPLOADER% -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -privacy unlisted -client-secrets "!YT_SECRETS!"
 set "UPLOAD_ERR=!errorlevel!"
 
 if !UPLOAD_ERR! neq 0 (

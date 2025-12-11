@@ -75,11 +75,15 @@ The script will:
 8. Click **Create**
 9. Click the **Download** icon (⬇️) next to your newly created OAuth client ID
 10. Save the downloaded JSON file
-11. Go to **APIs & Services → OAuth consent screen**
-12. Click **Audience**
-13. Under "Publishing Status", select **Publish**
 
-#### C. Set Up Credentials File
+#### c. Update Publishing Status
+
+1. Go to **APIs & Services → OAuth consent screen**
+2. Click **Audience**
+3. Under "Publishing Status", select **Publish**
+
+
+#### D. Set Up Credentials File
 
 1. Rename the downloaded file to `client_secrets.json`
 2. Place it in this directory:
@@ -88,7 +92,7 @@ The script will:
    └── client_secrets.json
    ```
 
-#### D. First-Time Authentication
+#### E. First-Time Authentication
 
 The first time you run the upload script:
 

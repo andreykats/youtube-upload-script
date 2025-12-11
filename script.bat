@@ -12,6 +12,7 @@ set "INPUT_EXT=%~x1"
 set "FFMPEG=ffmpeg.exe"
 set "FFPROBE=ffprobe.exe"
 set "UPLOADER=youtubeuploader.exe"
+set "CROPPED_CREATED=0"
 
 REM Create temp directory
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
@@ -28,7 +29,7 @@ if "!INPUT_FILE!"=="" (
     echo Usage: script.bat ^<video-file^>
     echo.
     echo Example:
-    echo   script.bat "GameName-2024.03.15 - 14.30.45.00.DVR.mp4"
+    echo   script.bat "Game Name 2024.03.15 - 14.30.45.00.DVR.mp4"
     echo.
     echo You can also drag and drop a video file onto this script.
     echo ============================================
@@ -185,28 +186,35 @@ REM ============================================
 REM Crop video if needed
 REM ============================================
 if "!NEEDS_CROP!"=="1" (
-    echo.
-    echo Cropping video to 16:9...
-    
-    REM Calculate 16:9 crop dimensions
-    set /a "NEW_WIDTH=(!HEIGHT! * 16) / 9"
-    set /a "X_OFFSET=(!WIDTH! - !NEW_WIDTH!) / 2"
-    
     set "OUTPUT_FILE=!INPUT_DIR!!INPUT_BASENAME! - Cropped!INPUT_EXT!"
-    
-    echo Crop dimensions: !NEW_WIDTH!x!HEIGHT! starting at X=!X_OFFSET!
-    
-    %FFMPEG% -i "!INPUT_FILE!" -vf "crop=!NEW_WIDTH!:!HEIGHT!:!X_OFFSET!:0" -c:a copy "!OUTPUT_FILE!" -y
-    set "FFMPEG_CROP_ERR=!errorlevel!"
 
-    if !FFMPEG_CROP_ERR! neq 0 (
-        echo ERROR: FFmpeg crop failed
-        pause
-        exit /b 1
+    if exist "!OUTPUT_FILE!" (
+        echo.
+        echo Cropped file already exists, skipping crop.
+        set "UPLOAD_FILE=!OUTPUT_FILE!"
+    ) else (
+        echo.
+        echo Cropping video to 16:9...
+        
+        REM Calculate 16:9 crop dimensions
+        set /a "NEW_WIDTH=(!HEIGHT! * 16) / 9"
+        set /a "X_OFFSET=(!WIDTH! - !NEW_WIDTH!) / 2"
+        
+        echo Crop dimensions: !NEW_WIDTH!x!HEIGHT! starting at X=!X_OFFSET!
+        
+        %FFMPEG% -i "!INPUT_FILE!" -vf "crop=!NEW_WIDTH!:!HEIGHT!:!X_OFFSET!:0" -c:a copy "!OUTPUT_FILE!" -y
+        set "FFMPEG_CROP_ERR=!errorlevel!"
+
+        if !FFMPEG_CROP_ERR! neq 0 (
+            echo ERROR: FFmpeg crop failed
+            pause
+            exit /b 1
+        )
+        
+        echo Crop complete!
+        set "UPLOAD_FILE=!OUTPUT_FILE!"
+        set "CROPPED_CREATED=1"
     )
-    
-    echo Crop complete!
-    set "UPLOAD_FILE=!OUTPUT_FILE!"
 ) else (
     set "UPLOAD_FILE=!INPUT_FILE!"
 )
@@ -232,7 +240,7 @@ if !UPLOAD_ERR! neq 0 (
 REM ============================================
 REM Cleanup
 REM ============================================
-if "!NEEDS_CROP!"=="1" (
+if "!NEEDS_CROP!"=="1" if "!CROPPED_CREATED!"=="1" (
     echo Cleaning up temporary files...
     del "!OUTPUT_FILE!" 2>nul
 )

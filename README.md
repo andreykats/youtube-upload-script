@@ -142,10 +142,10 @@ Elden Ring - 2:30PM - 03.15.2024
 
 ### Privacy Settings
 
-By default, videos are uploaded as **unlisted**. To change this, edit [script.bat:152](script.bat#L152):
+By default, videos are uploaded as **public**. To change this, edit [script.bat:152](script.bat#L152):
 
 ```batch
-%UPLOADER% -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -privacy unlisted
+%UPLOADER% -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -privacy public
 ```
 
 Options: `public`, `private`, `unlisted`

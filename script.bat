@@ -7,51 +7,12 @@ REM ============================================
 
 set "INPUT_FILE=%~1"
 set "TEMP_DIR=%TEMP%\youtube_upload"
-set "FFMPEG=ffmpeg"
-set "FFPROBE=ffprobe"
-set "UPLOADER=youtubeuploader"
-set "WHERE_CMD=%SystemRoot%\System32\where.exe"
-if not exist "%WHERE_CMD%" set "WHERE_CMD=where"
-set "PATH_REFRESHED=0"
-
-REM Refresh PATH from registry to avoid stale Explorer environment
-call :RefreshPath
+set "FFMPEG=ffmpeg.exe"
+set "FFPROBE=ffprobe.exe"
+set "UPLOADER=youtubeuploader.exe"
 
 REM Create temp directory
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
-
-REM ============================================
-REM Check for Required Dependencies
-REM ============================================
-set "MISSING_DEPS=0"
-
-call :CheckDependency "FFmpeg" "%FFMPEG%" "ffmpeg.exe"
-call :CheckDependency "FFprobe" "%FFPROBE%" "ffprobe.exe"
-call :CheckDependency "youtubeuploader" "%UPLOADER%" "youtubeuploader.exe"
-
-if !MISSING_DEPS!==1 (
-    echo.
-    echo ============================================
-    echo [ERROR] Missing Required Dependencies
-    echo ============================================
-    echo.
-    echo This script requires the following tools to be installed:
-    echo   - FFmpeg (video processing)
-    echo   - FFprobe (video analysis)
-    echo   - youtubeuploader (YouTube upload tool)
-    echo.
-    echo Please run install.bat to install all dependencies:
-    echo   ^> install.bat
-    echo.
-    echo Or install them manually and ensure they are in your PATH.
-    echo ============================================
-    echo.
-    pause
-    exit /b 1
-)
-
-echo [OK] All dependencies found
-echo.
 
 REM ============================================
 REM Validate Input File
@@ -269,99 +230,4 @@ echo Upload complete!
 echo ============================================
 echo.
 pause
-goto :EOF
-
-REM ============================================
-REM SUBROUTINES
-REM ============================================
-:RefreshPath
-REM Combine system + user PATH from registry to catch recent installs when double-clicked from Explorer
-for /f "skip=2 tokens=2*" %%a in ('reg query "HKLM\System\CurrentControlSet\Control\Session Manager\Environment" /v PATH 2^>nul') do set "SYSTEM_PATH=%%b"
-for /f "skip=2 tokens=2*" %%a in ('reg query "HKCU\Environment" /v PATH 2^>nul') do set "USER_PATH=%%b"
-if defined SYSTEM_PATH if defined USER_PATH (
-    set "PATH=%SYSTEM_PATH%;%USER_PATH%"
-    REM Expand embedded variables (e.g., %SystemRoot%) from registry values
-    call set "PATH=%PATH%"
-    set "PATH_REFRESHED=1"
-    echo [INFO] Current PATH is:
-    echo !PATH!
-)
-goto :EOF
-
-:CheckDependency
-REM Arguments:
-REM   %1 - Friendly name (FFmpeg, FFprobe, etc.)
-REM   %2 - Command or path to check
-REM   %3 - Fallback executable name (with .exe)
-
-set "DEP_NAME=%~1"
-set "DEP_CMD_RAW=%~2"
-set "DEP_FALLBACK_RAW=%~3"
-set "DEP_FOUND="
-
-REM Direct path check first (absolute paths)
-if exist "%DEP_CMD_RAW%" set "DEP_FOUND=%DEP_CMD_RAW%"
-if not defined DEP_FOUND if exist "%DEP_FALLBACK_RAW%" set "DEP_FOUND=%DEP_FALLBACK_RAW%"
-
-REM PATH lookup using where (handles PATHEXT)
-if not defined DEP_FOUND (
-    for %%p in (%DEP_CMD_RAW% %DEP_FALLBACK_RAW%) do (
-        if not defined DEP_FOUND (
-            for /f "delims=" %%i in ('where.exe %%p 2^>nul') do (
-                set "DEP_FOUND=%%i"
-                goto :AfterLookup
-            )
-        )
-    )
-)
-
-:AfterLookup
-REM Check well-known install locations (installer defaults)
-if not defined DEP_FOUND (
-    call :FindDefaultInstall "%DEP_NAME%" DEP_FOUND
-)
-
-if not defined DEP_FOUND (
-    echo [ERROR] %DEP_NAME% not found in PATH (looked for "%DEP_CMD_RAW%" and "%DEP_FALLBACK_RAW%")
-    echo [INFO] Current PATH is:
-    echo !PATH!
-    if !PATH_REFRESHED! equ 0 (
-        echo [INFO] PATH may be stale. Re-reading PATH from registry and retrying...
-        call :RefreshPath
-        set "PATH_REFRESHED=1"
-        goto :CheckDependency
-    )
-    set "MISSING_DEPS=1"
-    goto :EOF
-)
-
-echo [OK] %DEP_NAME% found at: !DEP_FOUND!
-goto :EOF
-
-:FindDefaultInstall
-REM Finds tool in default installer locations
-REM   %1 - Friendly name
-REM   %2 - Output variable
-set "FD_NAME=%~1"
-set "FD_OUT_VAR=%~2"
-set "FD_FOUND="
-
-if /i "%FD_NAME%"=="FFmpeg" (
-    if exist "%ProgramFiles%\FFmpeg\bin\ffmpeg.exe" set "FD_FOUND=%ProgramFiles%\FFmpeg\bin\ffmpeg.exe"
-    if not defined FD_FOUND if exist "%LOCALAPPDATA%\FFmpeg\bin\ffmpeg.exe" set "FD_FOUND=%LOCALAPPDATA%\FFmpeg\bin\ffmpeg.exe"
-)
-
-if /i "%FD_NAME%"=="FFprobe" (
-    if exist "%ProgramFiles%\FFmpeg\bin\ffprobe.exe" set "FD_FOUND=%ProgramFiles%\FFmpeg\bin\ffprobe.exe"
-    if not defined FD_FOUND if exist "%LOCALAPPDATA%\FFmpeg\bin\ffprobe.exe" set "FD_FOUND=%LOCALAPPDATA%\FFmpeg\bin\ffprobe.exe"
-)
-
-if /i "%FD_NAME%"=="youtubeuploader" (
-    if exist "%ProgramFiles%\YouTube Uploader\youtubeuploader.exe" set "FD_FOUND=%ProgramFiles%\YouTube Uploader\youtubeuploader.exe"
-    if not defined FD_FOUND if exist "%LOCALAPPDATA%\YouTube Uploader\youtubeuploader.exe" set "FD_FOUND=%LOCALAPPDATA%\YouTube Uploader\youtubeuploader.exe"
-    if not defined FD_FOUND if exist "C:\Program Files\youtubeuploader\youtubeuploader.exe" set "FD_FOUND=C:\Program Files\youtubeuploader\youtubeuploader.exe"
-    if not defined FD_FOUND if exist "%LOCALAPPDATA%\youtubeuploader\youtubeuploader.exe" set "FD_FOUND=%LOCALAPPDATA%\youtubeuploader\youtubeuploader.exe"
-)
-
-if defined FD_FOUND set "%FD_OUT_VAR%=%FD_FOUND%"
-goto :EOF
+exit /b 0

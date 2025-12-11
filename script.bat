@@ -59,25 +59,33 @@ set "FILENAME=%~n1"
 REM Remove " - Trim" suffix if present
 set "FILENAME=!FILENAME: - Trim=!"
 
-REM Split by date pattern (YYYY.MM.DD)
-for /f "tokens=1,2 delims=-" %%a in ("!FILENAME!") do (
-    set "GAME_NAME=%%a"
-    set "DATETIME=%%b"
+REM Expect format: "Game Name YYYY.MM.DD - HH.MM.SS.MS.DVR"
+REM Replace " - " with "|" to split date and time
+set "NAME_DATE_TIME=!FILENAME: - =|!"
+for /f "tokens=1,2 delims=|" %%a in ("!NAME_DATE_TIME!") do (
+    set "GAME_AND_DATE=%%a"
+    set "TIME_PART=%%b"
 )
 
-REM Trim spaces
-set "GAME_NAME=!GAME_NAME: =!"
+REM Trim spaces from game+date segment
+for /f "tokens=* delims= " %%a in ("!GAME_AND_DATE!") do set "GAME_AND_DATE=%%a"
+
+REM Extract date (last 10 chars = YYYY.MM.DD) and game name (everything before the space)
+set "DATE_STR=!GAME_AND_DATE:~-10!"
+set "GAME_NAME=!GAME_AND_DATE:~0,-11!"
+
+REM Trim spaces from game name
 for /f "tokens=* delims= " %%a in ("!GAME_NAME!") do set "GAME_NAME=%%a"
 
-REM Extract date and time from DATETIME (format: "YYYY.MM.DD - HH.MM.SS.MS.DVR")
-for /f "tokens=1,2,3 delims=." %%a in ("!DATETIME!") do (
+REM Extract date components
+for /f "tokens=1,2,3 delims=." %%a in ("!DATE_STR!") do (
     set "YEAR=%%a"
     set "MONTH=%%b"
     set "DAY=%%c"
 )
 
-REM Extract time (HH.MM.SS)
-for /f "tokens=4,5,6 delims=." %%a in ("!DATETIME!") do (
+REM Extract time components (HH.MM.SS from TIME_PART)
+for /f "tokens=1,2,3 delims=." %%a in ("!TIME_PART!") do (
     set "HOUR=%%a"
     set "MINUTE=%%b"
     set "SECOND=%%c"

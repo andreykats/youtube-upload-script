@@ -191,11 +191,13 @@ if !HEIGHT! equ 0 (
 REM Calculate aspect ratio (width/height * 100 for integer math)
 set /a "ASPECT_RATIO=(!WIDTH! * 100) / !HEIGHT!"
 set /a "TARGET_RATIO=177"
+set /a "TOLERANCE=2"
 
 echo Video dimensions: !WIDTH!x!HEIGHT!
-echo Aspect ratio: !ASPECT_RATIO! (16:9 = 177)
+echo Aspect ratio: !ASPECT_RATIO! (16:9 = 177-178)
 
-if !ASPECT_RATIO! gtr !TARGET_RATIO! (
+REM Check if aspect ratio is significantly wider than 16:9 (accounting for rounding)
+if !ASPECT_RATIO! gtr 178 (
     echo Video is wider than 16:9 - cropping required
     set "NEEDS_CROP=1"
 ) else (

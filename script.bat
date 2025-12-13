@@ -251,8 +251,8 @@ echo Title: !VIDEO_TITLE!
 echo File: !UPLOAD_FILE!
 echo.
 
-set "UPLOAD_LOG=%TEMP_DIR%\upload_output.txt"
-"%UPLOADER%" -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -description "" -privacy public -secrets "!YT_SECRETS!" -cache "!SCRIPT_DIR!request.token" > "!UPLOAD_LOG!" 2>&1
+set "UPLOAD_META=%TEMP_DIR%\upload_meta.json"
+"%UPLOADER%" -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -description "" -privacy public -secrets "!YT_SECRETS!" -cache "!SCRIPT_DIR!request.token" -metaJSONout "!UPLOAD_META!"
 set "UPLOAD_ERR=!errorlevel!"
 
 if !UPLOAD_ERR! neq 0 (
@@ -267,10 +267,15 @@ REM ============================================
 set "VIDEO_ID="
 set "YOUTUBE_URL="
 
-if exist "!UPLOAD_LOG!" (
-    for /f "tokens=1,2,3,4,5*" %%a in ('type "!UPLOAD_LOG!" ^| findstr /C:"Video ID:"') do (
-        set "VIDEO_ID=%%e"
+if exist "!UPLOAD_META!" (
+    REM Parse JSON to extract video ID
+    REM JSON format: "id": "VIDEO_ID_HERE"
+    for /f "tokens=2 delims=:, " %%a in ('type "!UPLOAD_META!" ^| findstr /C:"\"id\""') do (
+        set "VIDEO_ID=%%a"
     )
+
+    REM Remove quotes from video ID
+    set "VIDEO_ID=!VIDEO_ID:"=!"
 
     if defined VIDEO_ID (
         set "YOUTUBE_URL=https://www.youtube.com/watch?v=!VIDEO_ID!"
@@ -283,13 +288,13 @@ if exist "!UPLOAD_LOG!" (
         start "" "!YOUTUBE_URL!"
     ) else (
         echo.
-        echo [WARNING] Could not extract Video ID from upload output
+        echo [WARNING] Could not extract Video ID from upload metadata
         echo Upload succeeded but cannot open browser automatically
         echo.
     )
 
-    REM Clean up upload log
-    del "!UPLOAD_LOG!" 2>nul
+    REM Clean up metadata file
+    del "!UPLOAD_META!" 2>nul
 )
 
 REM ============================================

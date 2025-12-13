@@ -249,13 +249,45 @@ echo Title: !VIDEO_TITLE!
 echo File: !UPLOAD_FILE!
 echo.
 
-"%UPLOADER%" -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -description "" -privacy public -secrets "!YT_SECRETS!" -cache "!SCRIPT_DIR!request.token"
+set "UPLOAD_LOG=%TEMP_DIR%\upload_output.txt"
+"%UPLOADER%" -filename "!UPLOAD_FILE!" -title "!VIDEO_TITLE!" -description "" -privacy public -secrets "!YT_SECRETS!" -cache "!SCRIPT_DIR!request.token" > "!UPLOAD_LOG!" 2>&1
 set "UPLOAD_ERR=!errorlevel!"
 
 if !UPLOAD_ERR! neq 0 (
     echo ERROR: YouTube upload failed
     pause
     exit /b 1
+)
+
+REM ============================================
+REM Parse Video ID and Open in Browser
+REM ============================================
+set "VIDEO_ID="
+set "YOUTUBE_URL="
+
+if exist "!UPLOAD_LOG!" (
+    for /f "tokens=1,2,3*" %%a in ('type "!UPLOAD_LOG!" ^| findstr /C:"Video ID:"') do (
+        set "VIDEO_ID=%%c"
+    )
+
+    if defined VIDEO_ID (
+        set "YOUTUBE_URL=https://www.youtube.com/watch?v=!VIDEO_ID!"
+        echo.
+        echo ============================================
+        echo Opening video in browser...
+        echo URL: !YOUTUBE_URL!
+        echo ============================================
+        echo.
+        start "" "!YOUTUBE_URL!"
+    ) else (
+        echo.
+        echo [WARNING] Could not extract Video ID from upload output
+        echo Upload succeeded but cannot open browser automatically
+        echo.
+    )
+
+    REM Clean up upload log
+    del "!UPLOAD_LOG!" 2>nul
 )
 
 REM ============================================
@@ -269,6 +301,9 @@ if "!NEEDS_CROP!"=="1" if "!CROPPED_CREATED!"=="1" (
 echo.
 echo ============================================
 echo Upload complete!
+if defined YOUTUBE_URL (
+    echo Video URL: !YOUTUBE_URL!
+)
 echo ============================================
 echo.
 pause

@@ -289,7 +289,8 @@ if exist "!UPLOAD_LOG!" (
     )
 
     REM Clean up upload log
-    del "!UPLOAD_LOG!" 2>nul
+    REM del "!UPLOAD_LOG!" 2>nul
+    echo [DEBUG] Upload log saved to: !UPLOAD_LOG!
 )
 
 REM ============================================

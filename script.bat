@@ -268,8 +268,8 @@ set "VIDEO_ID="
 set "YOUTUBE_URL="
 
 if exist "!UPLOAD_LOG!" (
-    for /f "tokens=1,2,3*" %%a in ('type "!UPLOAD_LOG!" ^| findstr /C:"Video ID:"') do (
-        set "VIDEO_ID=%%c"
+    for /f "tokens=1,2,3,4,5*" %%a in ('type "!UPLOAD_LOG!" ^| findstr /C:"Video ID:"') do (
+        set "VIDEO_ID=%%e"
     )
 
     if defined VIDEO_ID (
@@ -289,8 +289,7 @@ if exist "!UPLOAD_LOG!" (
     )
 
     REM Clean up upload log
-    REM del "!UPLOAD_LOG!" 2>nul
-    echo [DEBUG] Upload log saved to: !UPLOAD_LOG!
+    del "!UPLOAD_LOG!" 2>nul
 )
 
 REM ============================================
